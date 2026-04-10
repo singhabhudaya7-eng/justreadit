@@ -23,6 +23,9 @@ export default function VSCodeLayout({
   const [bookmarks,   setBookmarks]    = useState([]);
   const [explorerOpen, setExplorerOpen] = useState(true);
   const [showBmNote,  setShowBmNote]   = useState(false);
+  const [showSupport, setShowSupport] = useState(
+    () => localStorage.getItem('devread-support-dismissed') !== '1'
+  );
 
   const editorRef      = useRef(null);
   const curIndexRef    = useRef(0);
@@ -79,16 +82,23 @@ export default function VSCodeLayout({
     return () => clearTimeout(t);
   }, [allLines]);
 
-  // Scroll tracking
+  // Scroll tracking — finds paragraph closest to the reading focal point (35% from top)
   const onScroll = useCallback(() => {
     if (!editorRef.current) return;
-    const containerTop = editorRef.current.getBoundingClientRect().top;
-    const els = editorRef.current.querySelectorAll('[data-para]');
+    const container = editorRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const focalY = containerRect.top + containerRect.height * 0.35; // natural reading eye position
+
+    const els = container.querySelectorAll('[data-para]');
     let found = 0;
+    let minDist = Infinity;
     for (const el of els) {
-      const top = el.getBoundingClientRect().top - containerTop;
-      if (top <= 60) found = parseInt(el.dataset.para, 10);
-      else break;
+      const rect = el.getBoundingClientRect();
+      const dist = Math.abs(rect.top - focalY);
+      if (dist < minDist) {
+        minDist = dist;
+        found = parseInt(el.dataset.para, 10);
+      }
     }
     if (found !== curIndexRef.current) {
       curIndexRef.current = found;
@@ -444,7 +454,7 @@ export default function VSCodeLayout({
 
           <div className="vsc-editor-container">
             {/* Editor content */}
-            <div className="vsc-editor" ref={editorRef} onScroll={onScroll}>
+            <div className="vsc-editor" ref={editorRef} onScroll={onScroll} data-reading={activeBook ? '' : undefined}>
               {!activeBook ? (
                 <VscWelcome onFileUpload={onFileUpload} fileInputRef={fileInputRef} />
               ) : (
@@ -532,6 +542,30 @@ export default function VSCodeLayout({
       {/* Hidden file input */}
       <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: 'none' }}
         onChange={e => { if (e.target.files?.[0]) onFileUpload(e.target.files[0]); }} />
+
+      {/* Support widget */}
+      {showSupport && (
+        <div className="support-widget">
+          <a
+            className="support-link"
+            href="https://buymeacoffee.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Support the developer"
+          >
+            <span className="support-cup">☕</span>
+            <span className="support-label">support</span>
+          </a>
+          <button
+            className="support-dismiss"
+            title="Dismiss"
+            onClick={() => {
+              setShowSupport(false);
+              localStorage.setItem('devread-support-dismissed', '1');
+            }}
+          >×</button>
+        </div>
+      )}
     </div>
   );
 }

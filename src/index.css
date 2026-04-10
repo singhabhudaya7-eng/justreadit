@@ -691,8 +691,22 @@ button { font-family: var(--font-mono); cursor: pointer; }
 .vsc-editor { counter-reset: line 0; }
 .vsc-editor-line.vsc-line-active-para::before { color: var(--vsc-line-num-sel); }
 .vsc-editor-line.vsc-line-active-para {
-  background: rgba(255,255,255,.04);
+  background: transparent;
+  /* Left-edge accent marks the active paragraph cleanly */
+  box-shadow: inset 2px 0 0 #007acc;
 }
+
+/* Subtle focus: non-active paragraphs are just slightly pulled back.
+   Active paragraph is fully crisp — no heavy dimming. */
+.vsc-editor[data-reading] .vsc-editor-line {
+  opacity: 0.68;
+  transition: opacity 0.18s ease;
+}
+.vsc-editor[data-reading] .vsc-editor-line.vsc-line-active-para {
+  opacity: 1;
+}
+/* File header always stays readable */
+.vsc-editor[data-reading] .vsc-file-header { opacity: 0.5; }
 
 /* VS Code line types */
 .vsc-l { display: block; white-space: pre-wrap; word-break: break-all; min-height: 1em; }
@@ -865,6 +879,74 @@ button { font-family: var(--font-mono); cursor: pointer; }
   margin-top: 10px;
 }
 .vsc-welcome-shortcuts .kbd { color: #858585; }
+
+/* ──────────────────────────────────────────────────────────
+   SUPPORT WIDGET
+────────────────────────────────────────────────────────── */
+@keyframes support-pulse {
+  0%, 100% { box-shadow: 0 0 6px 1px rgba(255, 180, 50, 0.25), 0 2px 12px rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 0 12px 3px rgba(255, 180, 50, 0.45), 0 2px 12px rgba(0,0,0,0.5); }
+}
+
+.support-widget {
+  position: fixed;
+  right: 175px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(28, 26, 22, 0.95);
+  border: 1px solid rgba(255, 180, 50, 0.3);
+  border-radius: 22px;
+  padding: 4px 4px 4px 11px;
+  z-index: 200;
+  cursor: pointer;
+  user-select: none;
+  animation: support-pulse 3s ease-in-out infinite;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.support-widget:hover {
+  background: rgba(40, 36, 26, 0.98);
+  border-color: rgba(255, 180, 50, 0.7);
+  box-shadow: 0 0 18px 4px rgba(255, 180, 50, 0.35), 0 4px 20px rgba(0,0,0,0.6) !important;
+  animation: none;
+}
+.support-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.support-cup {
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(255,200,80,0.6));
+}
+.support-label {
+  font-size: 10px;
+  letter-spacing: .05em;
+  color: rgba(255, 200, 100, 0.85);
+  font-weight: 500;
+}
+.support-widget:hover .support-label { color: rgba(255, 220, 130, 1); }
+.support-dismiss {
+  background: none;
+  border: none;
+  color: rgba(255,180,50,0.3);
+  padding: 2px 7px 2px 5px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s;
+  margin-left: 4px;
+}
+.support-dismiss:hover { color: rgba(255,180,50,0.8); }
 
 /* ──────────────────────────────────────────────────────────
    TERMINAL LAYOUT
