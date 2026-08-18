@@ -920,8 +920,8 @@ button { font-family: var(--font-mono); cursor: pointer; }
   white-space: nowrap;
 }
 .support-cup {
-  font-size: 14px;
-  line-height: 1;
+  display: block;
+  flex-shrink: 0;
   filter: drop-shadow(0 0 4px rgba(255,200,80,0.6));
 }
 .support-label {
