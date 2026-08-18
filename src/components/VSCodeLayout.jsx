@@ -23,9 +23,6 @@ export default function VSCodeLayout({
   const [bookmarks,   setBookmarks]    = useState([]);
   const [explorerOpen, setExplorerOpen] = useState(true);
   const [showBmNote,  setShowBmNote]   = useState(false);
-  const [showSupport, setShowSupport] = useState(
-    () => localStorage.getItem('devread-support-dismissed') !== '1'
-  );
 
   const editorRef      = useRef(null);
   const curIndexRef    = useRef(0);
@@ -191,7 +188,9 @@ export default function VSCodeLayout({
         <div className="vsc-title-text">
           {bookFileName || 'devread'} — Visual Studio Code
         </div>
-        <div style={{ width: 60 }} />
+        <button className="vsc-titlebar-mode-btn" onClick={onShowModeMenu} title="Switch view mode (Ctrl+M)">
+          <Monitor size={14} />
+        </button>
       </div>
 
       <div className="vsc-workbench">
@@ -542,30 +541,6 @@ export default function VSCodeLayout({
       {/* Hidden file input */}
       <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: 'none' }}
         onChange={e => { if (e.target.files?.[0]) onFileUpload(e.target.files[0]); }} />
-
-      {/* Support widget */}
-      {showSupport && (
-        <div className="support-widget">
-          <a
-            className="support-link"
-            href="https://buymeacoffee.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Support the developer"
-          >
-            <span className="support-cup">☕</span>
-            <span className="support-label">support</span>
-          </a>
-          <button
-            className="support-dismiss"
-            title="Dismiss"
-            onClick={() => {
-              setShowSupport(false);
-              localStorage.setItem('devread-support-dismissed', '1');
-            }}
-          >×</button>
-        </div>
-      )}
     </div>
   );
 }

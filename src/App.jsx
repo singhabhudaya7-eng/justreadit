@@ -1,30 +1,52 @@
 // App.jsx — Root: manages books, loading, mode switching
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import VSCodeLayout  from './components/VSCodeLayout';
 import TerminalLayout from './components/TerminalLayout';
-import ModeMenu      from './components/ModeMenu';
+import ReaderLayout   from './components/ReaderLayout';
+import ExcelLayout    from './components/ExcelLayout';
+import CmdLayout      from './components/CmdLayout';
+import ModeMenu       from './components/ModeMenu';
+import SupportWidget  from './components/SupportWidget';
 import { extractPDF } from './utils/pdfParser';
 import {
-  saveBook, loadBook, getAllBooks, deleteBook,
-  getProgress, getConfig, setConfig as persistConfig,
+  initStorage, saveBook, loadBook, getAllBooks, deleteBook,
+  getConfig, setConfig as persistConfig, DEFAULT_CONFIG,
 } from './utils/storage';
 
 export default function App() {
-  const [books,          setBooks]          = useState(() => getAllBooks());
+  const [ready,          setReady]          = useState(false);
+  const [books,          setBooks]          = useState({});
   const [activeBookName, setActiveBookName] = useState(null);
   const [activeBook,     setActiveBook]     = useState(null);
-  const [config,         setLocalConfig]    = useState(() => getConfig());
+  const [config,         setLocalConfig]    = useState(DEFAULT_CONFIG);
   const [loading,        setLoading]        = useState(false);
   const [loadPct,        setLoadPct]        = useState(0);
+  const [loadLabel,      setLoadLabel]      = useState('Parsing PDF…');
   const [showModeMenu,   setShowModeMenu]   = useState(false);
+
+  useEffect(() => {
+    initStorage().then(() => {
+      setBooks(getAllBooks());
+      setLocalConfig(getConfig());
+      setReady(true);
+    });
+  }, []);
 
   const refreshBooks = () => setBooks(getAllBooks());
 
-  const openBook = useCallback((name) => {
-    const b = loadBook(name);
-    if (!b) return;
-    setActiveBookName(name);
-    setActiveBook(b);
+  const openBook = useCallback(async (name) => {
+    setLoadLabel('Opening book…');
+    setLoadPct(0);
+    setLoading(true);
+    try {
+      const b = await loadBook(name);
+      if (b) {
+        setActiveBookName(name);
+        setActiveBook(b);
+      }
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const handleFile = useCallback(async (file) => {
@@ -32,6 +54,7 @@ export default function App() {
       alert('Please provide a valid .pdf file.');
       return;
     }
+    setLoadLabel('Parsing PDF…');
     setLoading(true);
     setLoadPct(0);
     try {
@@ -40,18 +63,19 @@ export default function App() {
         .replace(/\.pdf$/i, '')
         .replace(/[^a-z0-9_-]/gi, '_')
         .slice(0, 40);
-      saveBook(name, paragraphs, chunksPerPage, totalPages);
+      await saveBook(name, paragraphs, chunksPerPage, totalPages, file);
       refreshBooks();
-      setTimeout(() => {
-        setLoading(false);
-        openBook(name);
-      }, 300);
+      setLoadLabel('Opening book…');
+      const b = await loadBook(name);
+      setActiveBookName(name);
+      setActiveBook(b);
+      setLoading(false);
     } catch (err) {
       console.error(err);
       alert('Failed to parse PDF: ' + err.message);
       setLoading(false);
     }
-  }, [openBook]);
+  }, []);
 
   const handleDeleteBook = useCallback((name) => {
     if (!confirm(`Remove "${name}" from devread?`)) return;
@@ -87,25 +111,33 @@ export default function App() {
     onDeleteBook:   handleDeleteBook,
   };
 
+  if (!ready) {
+    return (
+      <div className="global-loading">
+        <div className="global-spinner" />
+        <div className="global-loading-text">Loading library…</div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Loading overlay (full screen) */}
       {loading && (
         <div className="global-loading">
           <div className="global-spinner" />
-          <div className="global-loading-text">Parsing PDF… {loadPct}%</div>
+          <div className="global-loading-text">{loadLabel} {loadPct > 0 ? `${loadPct}%` : ''}</div>
           <div className="global-loading-bar">
             <div className="global-loading-fill" style={{ width: `${loadPct}%` }} />
           </div>
         </div>
       )}
 
-      {!loading && (
-        <>
-          {config.appMode === 'vscode'   && <VSCodeLayout   {...sharedProps} />}
-          {config.appMode === 'terminal' && <TerminalLayout {...sharedProps} />}
-        </>
-      )}
+      {config.appMode === 'vscode'   && <VSCodeLayout   {...sharedProps} />}
+      {config.appMode === 'terminal' && <TerminalLayout {...sharedProps} />}
+      {config.appMode === 'reader'   && <ReaderLayout   {...sharedProps} />}
+      {config.appMode === 'excel'    && <ExcelLayout    {...sharedProps} />}
+      {config.appMode === 'cmd'      && <CmdLayout      {...sharedProps} />}
 
       {showModeMenu && (
         <ModeMenu
@@ -114,6 +146,8 @@ export default function App() {
           onClose={() => setShowModeMenu(false)}
         />
       )}
+
+      <SupportWidget />
     </>
   );
 }
