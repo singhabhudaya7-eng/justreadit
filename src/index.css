@@ -1602,6 +1602,10 @@ button { font-family: var(--font-mono); cursor: pointer; }
 .reader-page-flip { flex: 1; overflow: hidden; padding-top: 60px; animation: reader-page-in .25s ease; }
 @keyframes reader-page-in { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
 
+.reader-spread { flex: 1; display: flex; align-items: stretch; height: 100%; overflow: hidden; }
+.reader-page-half { max-width: none; flex: 1; margin: 0; padding: 60px 28px 0; overflow-y: auto; }
+.reader-spread-divider { width: 1px; background: var(--rt-border); margin: 60px 0 24px; flex-shrink: 0; }
+
 .reader-para { margin: 0 0 1.3em; text-indent: 1.6em; }
 .reader-para:first-of-type { text-indent: 0; }
 .reader-para-active { position: relative; }

@@ -19,6 +19,7 @@ export const DEFAULT_CONFIG = {
   readerStyle:    'scroll',   // 'scroll' | 'flip'
   readerTheme:    'dark-white',
   readerFontSize: 2,          // index into READER_FONT_SIZES (see ReaderLayout)
+  readerTwoPage:  false,      // flip mode: show two pages side by side
 };
 
 const _cache = {

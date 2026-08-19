@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Menu, Bookmark, BookmarkCheck, Sun, Moon, Plus, Minus,
   AlignJustify, BookOpen, HelpCircle, Monitor, X, Upload, Trash2,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Columns2,
 } from 'lucide-react';
 import {
   setProgress, getProgress, getBookmarks, toggleBookmark, isBookmarked,
@@ -40,6 +40,7 @@ export default function ReaderLayout({
   const style      = config.readerStyle || 'scroll';
   const theme      = config.readerTheme || 'dark-white';
   const fontStep   = config.readerFontSize ?? 2;
+  const twoPage    = style === 'flip' && !!config.readerTwoPage;
 
   const [curIndex,   setCurIndex]   = useState(0);
   const [bookmarks,  setBookmarks]  = useState([]);
@@ -64,7 +65,7 @@ export default function ReaderLayout({
   // ── Pagination (flip mode) ──────────────────────────────
   const pages = useMemo(() => {
     if (style !== 'flip' || !paragraphs.length) return [];
-    const budget = PAGE_CHAR_BUDGET[fontStep] || 2000;
+    const budget = Math.round((PAGE_CHAR_BUDGET[fontStep] || 2000) * (twoPage ? 0.48 : 1));
     const out = [];
     let cur = [];
     let curLen = 0;
@@ -79,7 +80,7 @@ export default function ReaderLayout({
     });
     if (cur.length) out.push({ startIdx, paraIdx: [...Array(cur.length)].map((_, k) => startIdx + k), text: cur });
     return out;
-  }, [style, activeBookName, fontStep]);
+  }, [style, activeBookName, fontStep, twoPage]);
 
   const curPageIdx = useMemo(() => {
     if (!pages.length) return 0;
@@ -154,17 +155,19 @@ export default function ReaderLayout({
 
   const nextPage = useCallback(() => {
     if (style === 'flip') {
-      const next = Math.min(pages.length - 1, curPageIdx + 1);
+      const step = twoPage ? 2 : 1;
+      const next = Math.min(pages.length - 1, curPageIdx + step);
       goToPara(pages[next]?.startIdx ?? curIndex);
     } else goToPara(curIndexRef.current + 1);
-  }, [style, pages, curPageIdx, curIndex, goToPara]);
+  }, [style, pages, curPageIdx, curIndex, goToPara, twoPage]);
 
   const prevPage = useCallback(() => {
     if (style === 'flip') {
-      const prev = Math.max(0, curPageIdx - 1);
+      const step = twoPage ? 2 : 1;
+      const prev = Math.max(0, curPageIdx - step);
       goToPara(pages[prev]?.startIdx ?? curIndex);
     } else goToPara(curIndexRef.current - 1);
-  }, [style, pages, curPageIdx, curIndex, goToPara]);
+  }, [style, pages, curPageIdx, curIndex, goToPara, twoPage]);
 
   const toggleBm = useCallback(() => {
     if (!activeBookName) return;
@@ -271,6 +274,15 @@ export default function ReaderLayout({
               >
                 {style === 'scroll' ? <BookOpen size={16} /> : <AlignJustify size={16} />}
               </button>
+              {style === 'flip' && (
+                <button
+                  className={`reader-icon-btn ${twoPage ? 'active' : ''}`}
+                  onClick={() => onConfigChange({ readerTwoPage: !twoPage })}
+                  title={twoPage ? 'Switch to single page' : 'Switch to two-page spread'}
+                >
+                  <Columns2 size={16} />
+                </button>
+              )}
               <div className="reader-theme-wrap">
                 <button className="reader-icon-btn" onClick={() => setShowThemes(v => !v)} title="Reading theme (N)">
                   {theme.startsWith('dark') ? <Moon size={15} /> : <Sun size={15} />}
@@ -313,17 +325,37 @@ export default function ReaderLayout({
             </div>
           </div>
         ) : (
-          <div className="reader-content reader-content-flip" onMouseUp={onMouseUp}>
+          <div className={`reader-content reader-content-flip ${twoPage ? 'reader-content-flip-two' : ''}`} onMouseUp={onMouseUp}>
             <button className="reader-flip-btn reader-flip-left" onClick={prevPage} disabled={curPageIdx === 0}>
               <ChevronLeft size={20} />
             </button>
-            <div className="reader-page-inner reader-page-flip" key={curPageIdx}>
-              {visibleParas.map(i => (
-                <p key={i} data-reader-para={i} className="reader-para">
-                  {renderWithHighlights(paragraphs[i], highlights.filter(h => h.paraIdx === i), removeHl)}
-                </p>
-              ))}
-            </div>
+            {twoPage ? (
+              <div className="reader-spread" key={curPageIdx}>
+                <div className="reader-page-inner reader-page-flip reader-page-half">
+                  {(pages[curPageIdx]?.paraIdx || []).map(i => (
+                    <p key={i} data-reader-para={i} className="reader-para">
+                      {renderWithHighlights(paragraphs[i], highlights.filter(h => h.paraIdx === i), removeHl)}
+                    </p>
+                  ))}
+                </div>
+                <div className="reader-spread-divider" />
+                <div className="reader-page-inner reader-page-flip reader-page-half">
+                  {(pages[curPageIdx + 1]?.paraIdx || []).map(i => (
+                    <p key={i} data-reader-para={i} className="reader-para">
+                      {renderWithHighlights(paragraphs[i], highlights.filter(h => h.paraIdx === i), removeHl)}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="reader-page-inner reader-page-flip" key={curPageIdx}>
+                {visibleParas.map(i => (
+                  <p key={i} data-reader-para={i} className="reader-para">
+                    {renderWithHighlights(paragraphs[i], highlights.filter(h => h.paraIdx === i), removeHl)}
+                  </p>
+                ))}
+              </div>
+            )}
             <button className="reader-flip-btn reader-flip-right" onClick={nextPage} disabled={curPageIdx >= pages.length - 1}>
               <ChevronRight size={20} />
             </button>
@@ -337,7 +369,9 @@ export default function ReaderLayout({
           <div className="reader-progress-bar"><div className="reader-progress-fill" style={{ width: `${pct}%` }} /></div>
           <div className="reader-footer-text">
             {style === 'flip'
-              ? <span>Page {curPageIdx + 1} of {pages.length || 1}</span>
+              ? (twoPage
+                  ? <span>Pages {curPageIdx + 1}–{Math.min(pages.length, curPageIdx + 2)} of {pages.length || 1}</span>
+                  : <span>Page {curPageIdx + 1} of {pages.length || 1}</span>)
               : <span>Paragraph {curIndex + 1} of {total}</span>}
             <span className="reader-footer-sep">·</span>
             <span>{pct}% read</span>

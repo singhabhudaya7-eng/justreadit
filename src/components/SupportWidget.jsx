@@ -3,10 +3,8 @@ import { useState } from 'react';
 import { Heart, X } from 'lucide-react';
 import { trackTidybitsClick } from '../utils/metrics';
 
-const DISMISS_KEY = 'devread-support-dismissed';
-
 export default function SupportWidget() {
-  const [visible, setVisible] = useState(() => localStorage.getItem(DISMISS_KEY) !== '1');
+  const [visible, setVisible] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
   if (!visible) return null;
@@ -31,7 +29,6 @@ export default function SupportWidget() {
           onClick={(e) => {
             e.stopPropagation();
             setVisible(false);
-            localStorage.setItem(DISMISS_KEY, '1');
           }}
         >×</button>
       </div>

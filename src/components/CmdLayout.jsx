@@ -9,6 +9,17 @@ import {
 } from '../utils/storage';
 
 const HOST = 'devuser@backend-worker-03';
+
+const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function findBook(books, arg) {
+  const target = norm(arg);
+  if (!target) return null;
+  const names = Object.keys(books);
+  return names.find(n => norm(n) === target)
+    || names.find(n => norm(n).includes(target))
+    || null;
+}
 const FORTUNES = [
   'The best code is the code you never had to write. — someone, probably in a standup',
   'A page turned is worth two lines committed.',
@@ -114,7 +125,7 @@ export default function CmdLayout({
 
       case 'cd': {
         if (!arg || arg === '..' || arg === '~') { print('(library) — use `ls` to see books'); break; }
-        const match = Object.keys(books).find(n => n === arg) || Object.keys(books).find(n => n.toLowerCase().includes(arg.toLowerCase()));
+        const match = findBook(books, arg);
         if (!match) { print(`bash: cd: ${arg}: No such file or directory`, 'err'); break; }
         onOpenBook(match);
         print(`opened ${match}`);
@@ -122,8 +133,8 @@ export default function CmdLayout({
       }
 
       case 'cat': case 'less': case 'more': case 'read':
-        if (arg && arg !== activeBookName) {
-          const match = Object.keys(books).find(n => n === arg || n.toLowerCase().includes(arg.toLowerCase()));
+        if (arg && norm(arg) !== norm(activeBookName)) {
+          const match = findBook(books, arg);
           if (match) { onOpenBook(match); print(`opened ${match}`); break; }
         }
         showParagraph(curIndexRef.current);
