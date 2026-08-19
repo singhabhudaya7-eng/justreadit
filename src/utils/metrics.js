@@ -1,22 +1,19 @@
-// metrics.js — Cross-user counters via countapi.mileshilliard.com (free, no signup, no keys).
-// No backend of our own: each browser hits a shared public counter directly.
-// Caveat: these keys are unauthenticated — anyone who learns them could inflate the numbers,
-// and "users" only counts browsers that still have their localStorage id (cleared storage /
-// other devices / other browsers = recounted as new). Good enough for a rough dashboard, not audit-grade.
+// metrics.js — Cross-user counters.
+// "users" is deduped server-side by IP (see netlify/functions/track-visit.js + Blobs) —
+// client-side localStorage dedup broke under incognito, cleared storage, and visits split
+// across readyourway.ink / www / the netlify.app subdomain. Clicks/minutes don't need
+// dedup, so those still go straight to a free, no-signup public counter API.
 
-const BASE = 'https://countapi.mileshilliard.com/api/v1';
+const COUNTAPI_BASE = 'https://countapi.mileshilliard.com/api/v1';
 
 const KEYS = {
-  users:  'readyourway_jru_users_v1',
   clicks: 'readyourway_jru_tidybits_clicks_v1',
   minutes: 'readyourway_jru_minutes_v1',
 };
 
-const UID_KEY = 'ryw_uid';
-
 async function hit(key, amount) {
   try {
-    const url = amount ? `${BASE}/hit/${key}?amount=${amount}` : `${BASE}/hit/${key}`;
+    const url = amount ? `${COUNTAPI_BASE}/hit/${key}?amount=${amount}` : `${COUNTAPI_BASE}/hit/${key}`;
     await fetch(url, { keepalive: true });
   } catch {
     // best-effort only
@@ -25,7 +22,7 @@ async function hit(key, amount) {
 
 async function get(key) {
   try {
-    const res = await fetch(`${BASE}/get/${key}`);
+    const res = await fetch(`${COUNTAPI_BASE}/get/${key}`);
     const data = await res.json();
     return data.value || 0;
   } catch {
@@ -33,13 +30,18 @@ async function get(key) {
   }
 }
 
-export function trackVisit() {
-  let uid = localStorage.getItem(UID_KEY);
-  if (!uid) {
-    uid = crypto.randomUUID();
-    localStorage.setItem(UID_KEY, uid);
-    hit(KEYS.users);
+async function getUsersCount() {
+  try {
+    const res = await fetch('/api/users-count');
+    const data = await res.json();
+    return data.users ?? 0;
+  } catch {
+    return null;
   }
+}
+
+export function trackVisit() {
+  fetch('/api/track-visit', { method: 'POST', keepalive: true }).catch(() => {});
 }
 
 export function trackTidybitsClick() {
@@ -53,7 +55,7 @@ export function trackMinutes(minutes) {
 
 export async function fetchAllMetrics() {
   const [users, clicks, minutes] = await Promise.all([
-    get(KEYS.users),
+    getUsersCount(),
     get(KEYS.clicks),
     get(KEYS.minutes),
   ]);
