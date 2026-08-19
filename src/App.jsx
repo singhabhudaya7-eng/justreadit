@@ -25,6 +25,13 @@ export default function App() {
   const [loadLabel,      setLoadLabel]      = useState('Parsing PDF…');
   const [showModeMenu,   setShowModeMenu]   = useState(false);
 
+  // The <title> in index.html is written for search engines / link previews;
+  // once the app actually loads, flip it back to the disguise so the browser
+  // tab doesn't give away what this is while someone's using it.
+  useEffect(() => {
+    document.title = 'devread — log streaming utility';
+  }, []);
+
   useEffect(() => {
     initStorage().then(() => {
       setBooks(getAllBooks());

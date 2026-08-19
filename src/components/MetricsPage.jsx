@@ -14,6 +14,10 @@ export default function MetricsPage() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
+    document.title = 'devread — log streaming utility';
+  }, []);
+
+  useEffect(() => {
     if (!unlocked) return;
     fetchAllMetrics().then(setData);
   }, [unlocked]);

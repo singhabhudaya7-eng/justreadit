@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /metric
+
+Sitemap: https://readyourway.ink/sitemap.xml
