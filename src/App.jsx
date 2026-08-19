@@ -12,6 +12,7 @@ import {
   initStorage, saveBook, loadBook, getAllBooks, deleteBook,
   getConfig, setConfig as persistConfig, DEFAULT_CONFIG,
 } from './utils/storage';
+import { trackVisit, trackMinutes } from './utils/metrics';
 
 export default function App() {
   const [ready,          setReady]          = useState(false);
@@ -31,6 +32,42 @@ export default function App() {
       setReady(true);
     });
   }, []);
+
+  // Global "time on site" tracking (independent of per-book stats), flushed
+  // to the shared counter whenever the tab is hidden/closed so it survives
+  // even if the user never comes back.
+  useEffect(() => {
+    if (!ready) return;
+    trackVisit();
+
+    let lastActive = Date.now();
+    let carryMs = 0;
+
+    const flush = () => {
+      const now = Date.now();
+      carryMs += now - lastActive;
+      lastActive = now;
+      const minutes = Math.floor(carryMs / 60000);
+      if (minutes > 0) {
+        carryMs -= minutes * 60000;
+        trackMinutes(minutes);
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) flush();
+      else lastActive = Date.now();
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', flush);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [ready]);
 
   const refreshBooks = () => setBooks(getAllBooks());
 

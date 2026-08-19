@@ -1,6 +1,7 @@
 // SupportWidget.jsx — Floating support button + "why this exists" popup, shown in every mode
 import { useState } from 'react';
 import { Heart, X } from 'lucide-react';
+import { trackTidybitsClick } from '../utils/metrics';
 
 const DISMISS_KEY = 'devread-support-dismissed';
 
@@ -51,7 +52,7 @@ export default function SupportWidget() {
               href="https://www.tidybits.in"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => setShowModal(false)}
+              onClick={() => { trackTidybitsClick(); setShowModal(false); }}
             >
               Take me to tidybits
             </a>
